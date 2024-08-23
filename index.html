@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>調整上傳的大頭照</title>
+  <style>
+    #canvas-container {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      border: 1px solid #000;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    #myCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      cursor: grab;
+    }
+    #zoomOut {
+      left: 80px;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container">
+    <canvas id="myCanvas" width="200" height="200"></canvas>
+  </div>
+  <button id="zoomIn">放大</button>
+  <button id="zoomOut">縮小</button>
+  <input type="file" id="upload" accept="image/*">
+  <!-- 上面操作完的內容會塞到下方的 form 中，由 form POST 出 -->
+
+  <form id="canvasForm" action="./upload.php" method="post">
+    <input type="hidden" name="canvasImage" id="canvasImage">
+    <button type="button" id="submitCanvas">送出</button>
+  </form>
+
+  <script>
+    const canvas = document.querySelector("#myCanvas");
+    const ctx = canvas.getContext("2d");
+    const upload = document.querySelector("#upload");
+    const zoomInBtn = document.querySelector("#zoomIn");
+    const zoomOutBtn = document.querySelector("#zoomOut");
+
+    let img = new Image();
+    let scale = 1;
+    let posX = 0, posY = 0;
+    let isDragging = false;
+    let startX, startY;
+
+    document.querySelector("#submitCanvas").addEventListener("click", () => {
+      const dataURL = canvas.toDataURL("image/png");
+      document.querySelector("#canvasImage").value = dataURL;
+      document.querySelector("#canvasForm").submit();
+    });
+
+    upload.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        img.src = e.target.result;
+        img.onload = function() {
+          drawImage();
+        }
+      }
+      reader.readAsDataURL(file);
+    });
+
+    function drawImage() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const widthRatio = canvas.width / img.width;
+      const heightRatio = canvas.height / img.height;
+      const ratio = Math.max(widthRatio, heightRatio);
+
+      const drawWidth = img.width * scale * ratio;
+      const drawHeight = img.height * scale * ratio;
+
+      ctx.drawImage(img, posX, posY, drawWidth, drawHeight);
+    }
+
+    zoomInBtn.addEventListener("click", () => {
+      scale *= 1.1;
+      drawImage();
+    });
+
+    zoomOutBtn.addEventListener("click", () => {
+      scale /= 1.1;
+      drawImage();
+    });
+
+    canvas.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      startX = e.clientX - posX;
+      startY = e.clientY - posY;
+      canvas.style.cursor = "grabbing";
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (isDragging) {
+        posX = e.clientX - startX;
+        posY = e.clientY - startY;
+        drawImage();
+      }
+    });
+
+    canvas.addEventListener("mouseup", () => {
+      isDragging = false;
+      canvas.style.cursor = "grab";
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      isDragging = false;
+      canvas.style.cursor = "grab";
+    });
+  </script>
+</body>
+</html>
